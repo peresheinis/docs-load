@@ -1,0 +1,39 @@
+name: Publish SmartWeb.DocumentService
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        type: choice
+        required: true
+        default: prerelease
+        options:
+        - premajor
+        - preminor
+        - prepatch
+        - prerelease
+        - patch
+        - accept # убирает suffix
+        
+jobs:
+  call_bump_version:
+    uses: ./.github/workflows/bump_version.yml
+    with:
+      revision: ${{ inputs.revision }}
+      project_dir: ./src/DocumentService.Web
+      project_name: DocumentService.Web.csproj
+    secrets: inherit
+
+  call_publish_workflow:
+    needs: [call_bump_version]
+    if:  | 
+      !cancelled() &&
+      needs.call_bump_version.result == 'success'
+    uses: ./.github/workflows/publish_base.yml
+    with:
+      docker_registry: lebedeffdeveloper
+      image_name: tts_doc_service
+      dockerfile_path: ./src/DocumentService.Web/Dockerfile
+      project_path: ./src/DocumentService.Web/DocumentService.Web.csproj
+      image_tag: ${{ github.ref_name }}
+    secrets: inherit

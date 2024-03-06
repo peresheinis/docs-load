@@ -1,0 +1,61 @@
+name: _bump_base
+
+on:
+  workflow_call:
+    inputs:
+      revision:
+        required: true
+        type: string
+      project_dir:
+        required: true
+        type: string
+      project_name:
+        required: true
+        type: string
+      dotnet_version:
+        required: false
+        type: string
+        default: '7.x'
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_LOGIN: peresheinis
+      GITHUB_TOKEN: ${{secrets.peresheinis_PAT}}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Setup dotnet-version-cli
+        run: |
+          dotnet tool install -g dotnet-version-cli
+          cd ${{ inputs.project_dir }}
+          dotnet build -c Release
+
+      - name: Call bump script
+        run: |
+          chmod +x scripts/bump.sh
+          echo "OLD_PROJECT_VERSION=$(grep -oP '(?<=<Version>).*?(?=</Version>)' ${{ inputs.project_dir }}/${{ inputs.project_name }})" >> $GITHUB_ENV
+          scripts/bump.sh ${{ inputs.project_dir }}/${{ inputs.project_name }} ${{ inputs.revision }} ${{ github.ref_name }}
+          echo "PROJECT_VERSION=$(grep -oP '(?<=<Version>).*?(?=</Version>)' ${{ inputs.project_dir }}/${{ inputs.project_name }})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: ${{ inputs.project_name }} updated from ${{ env.OLD_PROJECT_VERSION }} to ${{ env.PROJECT_VERSION }}
+          author_name: GitHub Actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          committer_name: GitHub Actions
+          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+          pull: '--ff'
+          add: "."
+          push: true

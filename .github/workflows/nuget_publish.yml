@@ -1,0 +1,24 @@
+name: Publish nuget DocumentService.Shared
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          ref: ${{ github.ref_name }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Publish Nuget
+      run: | # | character makes the "run" property multi-line, so we can put multiple commands in the same step
+          cd ./src/DocumentService.Shared
+          mkdir __out
+          dotnet pack -c Release -o __out
+          dotnet nuget push "./__out/*.nupkg" --skip-duplicate --api-key ${{secrets.NUGET_PUBLISH_TOKEN}} --source https://nuget.pkg.github.com/TenzoTechService/index.json

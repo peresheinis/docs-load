@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  documentservice.web:
+    image: ${DOCKER_REGISTRY-}documentserviceweb
+    build:
+      context: .
+      dockerfile: DocumentService.Web/Dockerfile
